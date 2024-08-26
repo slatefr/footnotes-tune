@@ -37,6 +37,13 @@ type NotesForHolders = {
 };
 
 /**
+ * PopoverMapper for Editor.js
+ */
+type PopoverMapper = {
+  [blockId:string]: Popover;
+};
+
+/**
  * A helper to delay event handling
  *
  * @param func - Function
@@ -74,6 +81,11 @@ export default class FootnotesTune implements BlockTune {
    * Notes
    */
   private static notes: NotesForHolders = {};
+
+  /**
+   * Popovers
+   */
+  private static popovers: PopoverMapper = {};
 
   /**
    * Tune's wrapper for tools' content
@@ -146,6 +158,7 @@ export default class FootnotesTune implements BlockTune {
     this.block = block;
     this.config = config;
     this.popover = new Popover(block, this.wrapper, api, this.config);
+    FootnotesTune.popovers[this.block.id] = this.popover;
   }
 
   /**
@@ -374,20 +387,11 @@ export default class FootnotesTune implements BlockTune {
         /**
          * Some blocks removed or joined
          */
-        const jobs = [];
+        const timeout = 300;
 
-        for (let i = 0, len = this.api.blocks.getBlocksCount(); i < len; i++) {
-          const block = this.api.blocks.getBlockByIndex(i) as BlockAPI;
-
-          if (block.holder) {
-            const blockContent = block.holder.querySelector('.cdx-block') as HTMLElement;
-
-            jobs.push(this.hydrate(blockContent));
-          }
-        }
-        Promise.all(jobs).then(() => {
-          this.updateIndices();
-        });
+        setTimeout(() => {
+          this.refreshNotes();
+        }, timeout);
       } else if (shouldUpdateIndices) {
         /**
          * If sup text doesn't match the index of it
@@ -427,61 +431,94 @@ export default class FootnotesTune implements BlockTune {
   }
 
   /**
+   * Refreshes notes
+   */
+  private refreshNotes(): void {
+    const holderId = this.getHolderId();
+
+    if (!holderId) {
+      return;
+    }
+    if (!FootnotesTune.notes[holderId]) {
+      FootnotesTune.notes[holderId] = {};
+    }
+    const holder = document.getElementById(holderId);
+
+    if (holder) {
+      const sups:NodeListOf<HTMLElement> = holder.querySelectorAll(`sup[data-tune=${Note.dataAttribute}]`);
+
+      for (let i = 0, len = sups.length; i < len; i++) {
+        const sup = sups[i];
+        const noteId = sup.dataset.id || '';
+        const note = FootnotesTune.notes[holderId][noteId];
+
+        if (note.node !== sup) {
+          note.node = sup;
+        }
+        note.index = i + 1;
+        const blockNode = sup.closest('.ce-block');
+
+        if (blockNode instanceof HTMLElement) {
+          const blockId: string = blockNode.dataset.id || '';
+
+          note.updatePopover(FootnotesTune.popovers[blockId]);
+          note.listenToClicks();
+        }
+      }
+    }
+  }
+
+  /**
    * Hydrate content passed on render
    *
    * @param content - Tool's content
    */
-  private hydrate(content: HTMLElement): Promise<void> {
+  private hydrate(content: HTMLElement): void {
     /* content might be not yet populated, so we are using a timeout */
-    return new Promise(resolve => {
-      const blockData = this.data || [];
-      const sups = content.querySelectorAll(`sup[data-tune=${Note.dataAttribute}]`);
-      // console.log("-----");
-      // console.log({ "innerHTML": content.innerHTML });
-      // console.log({ "query": `sup[data-tune=${Note.dataAttribute}]` });
-      // console.log({ "data": data });
-      // console.log({ "sups": sups });
+    const blockData = this.data || [];
+    const sups = content.querySelectorAll(`sup[data-tune=${Note.dataAttribute}]`);
+    // console.log("-----");
+    // console.log({ "innerHTML": content.innerHTML });
+    // console.log({ "query": `sup[data-tune=${Note.dataAttribute}]` });
+    // console.log({ "data": data });
+    // console.log({ "sups": sups });
+    const holderId = this.getHolderId();
 
-      const holderId = this.getHolderId();
+    if (!holderId) {
+      return;
+    }
+    if (!FootnotesTune.notes[holderId]) {
+      FootnotesTune.notes[holderId] = {};
+    }
+    const useFromCache = sups.length != blockData.length;
 
-      if (!holderId) {
-        return;
-      }
-      if (!FootnotesTune.notes[holderId]) {
-        FootnotesTune.notes[holderId] = {};
-      }
+    sups.forEach((sup, i) => {
+      if (sup instanceof HTMLElement) {
+        const noteId = sup.dataset.id || '';
+        const oldNote = FootnotesTune.notes[holderId][noteId];
+        let noteContent = '';
+        let index= 0;
 
-      const useFromCache = sups.length != blockData.length;
-
-      sups.forEach((sup, i) => {
-        if (sup instanceof HTMLElement) {
-          const noteId = sup.dataset.id || '';
-          const oldNote = FootnotesTune.notes[holderId][noteId];
-          let noteContent = '';
-          let index= 0;
-
-          if (oldNote) {
-            noteContent = oldNote.content || '';
-            index = oldNote.index || 0;
-          }
-          if (oldNote && useFromCache) {
-            blockData[i] = {
-              id: noteId,
-              content: noteContent,
-              superscript: index + 1,
-            };
-          }
-          const newNote = new Note(sup as HTMLElement, this.popover, blockData[i].id);
-
-          newNote.content = blockData[i].content;
-
-          if (FootnotesTune.notes[holderId][newNote.id]) {
-            delete FootnotesTune.notes[holderId][newNote.id];
-          }
-          FootnotesTune.notes[holderId][newNote.id] = newNote;
+        if (oldNote) {
+          noteContent = oldNote.content || '';
+          index = oldNote.index || 0;
         }
-      });
-      resolve();
+        if (oldNote && useFromCache) {
+          blockData[i] = {
+            id: noteId,
+            content: noteContent,
+            superscript: index + 1,
+          };
+        }
+        const newNote = new Note(sup as HTMLElement, this.popover, blockData[i].id);
+
+        newNote.content = blockData[i].content;
+
+        if (FootnotesTune.notes[holderId][newNote.id]) {
+          delete FootnotesTune.notes[holderId][newNote.id];
+        }
+        FootnotesTune.notes[holderId][newNote.id] = newNote;
+      }
     });
   }
 }

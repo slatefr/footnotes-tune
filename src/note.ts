@@ -88,9 +88,8 @@ export default class Note {
     this.node.dataset.tune = Note.dataAttribute;
     this.node.dataset.id = this.id;
     this.node.textContent = '*';
-    this.node.addEventListener('click', () => {
-      this.popover.open(this);
-    });
+    this.node.removeEventListener('click', this.openPopover);
+    this.node.addEventListener('click', this.openPopover);
   }
 
   /**
@@ -126,4 +125,28 @@ export default class Note {
       superscript: this.index,
     };
   }
+
+  /**
+   * Listen to clicks
+   */
+  public listenToClicks(): void {
+    this.node.removeEventListener('click', this.openPopover);
+    this.node.addEventListener('click', this.openPopover);
+  }
+
+  /**
+   * Update popover
+   *
+   * @param popover - Popover
+   */
+  public updatePopover(popover: Popover): void {
+    this.popover = popover;
+  }
+
+  /**
+   * Open popover
+   */
+  private openPopover = (): void => {
+    this.popover.open(this);
+  };
 }
