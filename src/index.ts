@@ -3,7 +3,7 @@ import styles from  './index.pcss';
 import { API, BlockTune } from '@editorjs/editorjs';
 import { make } from './dom';
 import Popover from './popover';
-import Note, {NoteData} from './note';
+import Note, { NoteData } from './note';
 import IconAddFootnote from './assets/add-footnote.svg';
 import Shortcut from '@codexteam/shortcuts';
 

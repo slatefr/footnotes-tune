@@ -104,3 +104,5 @@ dist
 
 cypress/videos/
 cypress/screenshots/
+
+.nvmrc
