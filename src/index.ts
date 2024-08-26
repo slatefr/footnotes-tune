@@ -3,7 +3,7 @@ import styles from  './index.pcss';
 import { API, BlockTune } from '@editorjs/editorjs';
 import { make } from './dom';
 import Popover from './popover';
-import Note, { NoteData } from './note';
+import Note, {NoteData} from './note';
 import IconAddFootnote from './assets/add-footnote.svg';
 import Shortcut from '@codexteam/shortcuts';
 
@@ -257,16 +257,27 @@ export default class FootnotesTune implements BlockTune {
    * @param content - Tool's content
    */
   private hydrate(content: HTMLElement): void {
-    const sups = content.querySelectorAll(`sup[data-tune=${Note.dataAttribute}]`);
+    /* content might be not yet populated, so we are using a timeout */
+    let popover = this.popover;
+    let data = this.data;
+    const timeout = 300;
+    setTimeout(function() {
+      const sups = content.querySelectorAll(`sup[data-tune=${Note.dataAttribute}]`);
+      // console.log("-----");
+      // console.log({ "innerHTML": content.innerHTML });
+      // console.log({ "query": `sup[data-tune=${Note.dataAttribute}]` });
+      // console.log({ "data": data });
+      // console.log({ "sups": sups });
 
-    sups.forEach((sup, i) => {
-      const note = new Note(sup as HTMLElement, this.popover, this.data[i].id);
+      sups.forEach((sup, i) => {
+        const note = new Note(sup as HTMLElement, popover, data[i].id);
 
-      note.index = parseInt(sup.textContent || '0');
+        note.index = parseInt(sup.textContent || '0');
 
-      note.content = this.data[i].content;
-      FootnotesTune.notes.push(note);
-    });
+        note.content = data[i].content;
+        FootnotesTune.notes.push(note);
+      });
+    }, timeout);
   }
 }
 
