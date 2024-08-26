@@ -1,9 +1,9 @@
 import styles from  './index.pcss';
 
-import { API, BlockTune } from '@editorjs/editorjs';
+import { API, BlockTune, BlockAPI } from '@editorjs/editorjs';
 import { make } from './dom';
 import Popover from './popover';
-import Note, {NoteData} from './note';
+import Note, { NoteData } from './note';
 import IconAddFootnote from './assets/add-footnote.svg';
 import Shortcut from '@codexteam/shortcuts';
 
@@ -71,6 +71,11 @@ export default class FootnotesTune implements BlockTune {
   private readonly api: API;
 
   /**
+   * Block
+   */
+  private block: BlockAPI;
+
+  /**
    * Shortcut instance
    */
   private shortcut: any;
@@ -89,12 +94,13 @@ export default class FootnotesTune implements BlockTune {
    * @param api - Editor.js API
    * @param config - Tune's config
    */
-  constructor({ data, api, config = {} }: { data: FootnotesData, api: API, config?: FootnotesTuneConfig }) {
+  constructor({ data, api, block, config = {} }: { data: FootnotesData, api: API, block: BlockAPI, config?: FootnotesTuneConfig }) {
     this.data = data;
     this.api = api;
+    this.block = block;
     this.config = config;
 
-    this.popover = new Popover(this.wrapper, api, this.config);
+    this.popover = new Popover(block, this.wrapper, api, this.config);
   }
 
   /**
@@ -258,10 +264,11 @@ export default class FootnotesTune implements BlockTune {
    */
   private hydrate(content: HTMLElement): void {
     /* content might be not yet populated, so we are using a timeout */
-    let popover = this.popover;
-    let data = this.data;
+    const popover = this.popover;
+    const data = this.data;
     const timeout = 300;
-    setTimeout(function() {
+
+    setTimeout(function () {
       const sups = content.querySelectorAll(`sup[data-tune=${Note.dataAttribute}]`);
       // console.log("-----");
       // console.log({ "innerHTML": content.innerHTML });

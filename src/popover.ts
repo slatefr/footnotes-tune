@@ -1,7 +1,7 @@
 import { make } from './dom';
 import styles from './popover.pcss';
 import Note from './note';
-import { API } from '@editorjs/editorjs';
+import { API, BlockAPI } from '@editorjs/editorjs';
 import { FootnotesTuneConfig } from './index';
 import { isRangeAtEnd, setSelectionAtEnd, throttled } from './utils';
 
@@ -32,6 +32,11 @@ export default class Popover {
   private lastNote: Note | null = null;
 
   /**
+   * FootnotesTune
+   */
+  private block: BlockAPI;
+
+  /**
    * Tune's wrapper
    */
   private wrapper: HTMLElement;
@@ -54,11 +59,13 @@ export default class Popover {
   private config: FootnotesTuneConfig;
 
   /**
+   * @param block - Editor.js Block API
    * @param wrapper - Tune's wrapper
    * @param api - Editor.js API
    * @param config - Tune's config
    */
-  constructor(wrapper: HTMLElement, api: API, config: FootnotesTuneConfig) {
+  constructor(block: BlockAPI, wrapper: HTMLElement, api: API, config: FootnotesTuneConfig) {
+    this.block = block;
     this.api = api;
     this.wrapper = wrapper;
     this.readOnly = api.readOnly.isEnabled;
@@ -139,6 +146,8 @@ export default class Popover {
     }
 
     this.currentNote = null;
+
+    this.block.dispatchChange();
   }
 
   /**
