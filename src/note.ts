@@ -87,6 +87,7 @@ export default class Note {
 
     this.node.dataset.tune = Note.dataAttribute;
     this.node.dataset.id = this.id;
+    this.node.textContent = '*';
     this.node.addEventListener('click', () => {
       this.popover.open(this);
     });

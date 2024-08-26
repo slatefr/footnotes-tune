@@ -7,6 +7,8 @@ import Note, { NoteData } from './note';
 import IconAddFootnote from './assets/add-footnote.svg';
 import Shortcut from '@codexteam/shortcuts';
 
+const DEBOUNCE_DELAY = 500;
+
 /**
  * Type of Footnotes Tune data
  */
@@ -32,6 +34,21 @@ type NoteMapper = {
  */
 type NotesForHolders = {
   [key:string]: NoteMapper;
+};
+
+/**
+ * A helper to delay event handling
+ *
+ * @param func - Function
+ * @param delay - Delay
+ */
+const debounce = <T extends (...args: any[]) => any>(func: T, delay: number): any => {
+  let timer: ReturnType<typeof setTimeout>;
+
+  return (...args: Parameters<T>) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => func.apply(this, args), delay);
+  };
 };
 
 /**
@@ -71,12 +88,16 @@ export default class FootnotesTune implements BlockTune {
   /**
    * We need to observe mutations to check if footnote removed
    */
-  private observer = new MutationObserver(this.contentDidMutated.bind(this));
+  private observer = new MutationObserver(
+    debounce(this.contentDidMutated.bind(this), DEBOUNCE_DELAY)
+  );
 
   /**
    * We need to observe mutations to check if footnote removed
    */
-  private intersectionObserver = new IntersectionObserver(this.blocksMoved.bind(this));
+  private intersectionObserver = new IntersectionObserver(
+    debounce(this.blocksMoved.bind(this), DEBOUNCE_DELAY)
+  );
 
   /**
    * Data passed on render
@@ -324,7 +345,6 @@ export default class FootnotesTune implements BlockTune {
    * Blocks moved
    */
   private blocksMoved(): void {
-    // TODO: maybe this event handler can be optimized or happen after a delay
     const holderId = this.getHolderId();
 
     if (!holderId) {
@@ -390,7 +410,7 @@ export default class FootnotesTune implements BlockTune {
   private hydrate(content: HTMLElement): void {
     /* content might be not yet populated, so we are using a timeout */
     const popover = this.popover;
-    const data = this.data;
+    const data = this.data || [];
     const timeout = 300;
 
     setTimeout(() => {
