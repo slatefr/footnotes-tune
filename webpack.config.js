@@ -56,7 +56,7 @@ module.exports = {
   output: {
     path: __dirname + '/dist',
     publicPath: '/',
-    filename: 'bundle.js',
+    filename: 'footnotes.js',
     library: 'FootnotesTune',
     libraryTarget: 'umd',
     libraryExport: 'default'
