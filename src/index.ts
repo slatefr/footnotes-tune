@@ -92,6 +92,7 @@ export default class FootnotesTune implements BlockTune {
    *
    * @param data - data passed on render
    * @param api - Editor.js API
+   * @param block - Editor.js Block API
    * @param config - Tune's config
    */
   constructor({ data, api, block, config = {} }: { data: FootnotesData, api: API, block: BlockAPI, config?: FootnotesTuneConfig }) {
@@ -277,12 +278,21 @@ export default class FootnotesTune implements BlockTune {
       // console.log({ "sups": sups });
 
       sups.forEach((sup, i) => {
-        const note = new Note(sup as HTMLElement, popover, data[i].id);
+        if (sup instanceof HTMLElement) {
+          if (!data[i]) {
+            data[i] = {
+              id: sup.dataset.id || '',
+              content: '',
+              superscript: i + 1,
+            };
+          }
+          const note = new Note(sup as HTMLElement, popover, data[i].id);
 
-        note.index = parseInt(sup.textContent || '0');
+          note.index = parseInt(sup.textContent || '0');
 
-        note.content = data[i].content;
-        FootnotesTune.notes.push(note);
+          note.content = data[i].content;
+          FootnotesTune.notes.push(note);
+        }
       });
     }, timeout);
   }
