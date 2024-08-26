@@ -209,7 +209,11 @@ export default class FootnotesTune implements BlockTune {
   public wrap(pluginsContent: HTMLElement): HTMLElement {
     this.wrapper.append(pluginsContent, this.popover.node);
 
-    this.hydrate(pluginsContent);
+    const timeout = 300;
+
+    setTimeout(() => {
+      this.hydrate(pluginsContent);
+    }, timeout);
 
     // At this point, the wrapper is not yet attached to DOM, so
     // this.wrapper.isConnected === false;
@@ -347,8 +351,14 @@ export default class FootnotesTune implements BlockTune {
     }
     const holder = document.getElementById(holderId);
     let shouldUpdateIndices = false;
+    let shouldRehydrateAll = false;
 
     if (holder) {
+      const oldBlocksCount = parseInt(holder.dataset.blocksCount || '0', 10);
+      const newBlocksCount = this.api.blocks.getBlocksCount();
+
+      holder.dataset.blocksCount = newBlocksCount.toString();
+      shouldRehydrateAll = newBlocksCount < oldBlocksCount;
       const sups:NodeListOf<HTMLElement> = holder.querySelectorAll(`sup[data-tune=${Note.dataAttribute}]`);
 
       for (let i = 0, len = sups.length; i < len; i++) {
@@ -359,12 +369,31 @@ export default class FootnotesTune implements BlockTune {
           break;
         }
       }
-    }
-    /**
-     * If sup text doesn't match the index of it
-     */
-    if (shouldUpdateIndices) {
-      this.updateIndices();
+
+      if (shouldRehydrateAll) {
+        /**
+         * Some blocks removed or joined
+         */
+        const jobs = [];
+
+        for (let i = 0, len = this.api.blocks.getBlocksCount(); i < len; i++) {
+          const block = this.api.blocks.getBlockByIndex(i) as BlockAPI;
+
+          if (block.holder) {
+            const blockContent = block.holder.querySelector('.cdx-block') as HTMLElement;
+
+            jobs.push(this.hydrate(blockContent));
+          }
+        }
+        Promise.all(jobs).then(() => {
+          this.updateIndices();
+        });
+      } else if (shouldUpdateIndices) {
+        /**
+         * If sup text doesn't match the index of it
+         */
+        this.updateIndices();
+      }
     }
   }
 
@@ -402,13 +431,10 @@ export default class FootnotesTune implements BlockTune {
    *
    * @param content - Tool's content
    */
-  private hydrate(content: HTMLElement): void {
+  private hydrate(content: HTMLElement): Promise<void> {
     /* content might be not yet populated, so we are using a timeout */
-    const popover = this.popover;
-    const blockData = this.data || [];
-    const timeout = 300;
-
-    setTimeout(() => {
+    return new Promise(resolve => {
+      const blockData = this.data || [];
       const sups = content.querySelectorAll(`sup[data-tune=${Note.dataAttribute}]`);
       // console.log("-----");
       // console.log({ "innerHTML": content.innerHTML });
@@ -425,6 +451,8 @@ export default class FootnotesTune implements BlockTune {
         FootnotesTune.notes[holderId] = {};
       }
 
+      const useFromCache = sups.length != blockData.length;
+
       sups.forEach((sup, i) => {
         if (sup instanceof HTMLElement) {
           const noteId = sup.dataset.id || '';
@@ -436,14 +464,14 @@ export default class FootnotesTune implements BlockTune {
             noteContent = oldNote.content || '';
             index = oldNote.index || 0;
           }
-          if (!blockData[i]) {
+          if (oldNote && useFromCache) {
             blockData[i] = {
               id: noteId,
               content: noteContent,
               superscript: index + 1,
             };
           }
-          const newNote = new Note(sup as HTMLElement, popover, blockData[i].id);
+          const newNote = new Note(sup as HTMLElement, this.popover, blockData[i].id);
 
           newNote.content = blockData[i].content;
 
@@ -453,7 +481,8 @@ export default class FootnotesTune implements BlockTune {
           FootnotesTune.notes[holderId][newNote.id] = newNote;
         }
       });
-    }, timeout);
+      resolve();
+    });
   }
 }
 

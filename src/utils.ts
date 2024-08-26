@@ -58,12 +58,14 @@ export function isRangeAtEnd(range: Range): boolean {
  * @param element - element to set selection in
  */
 export function setSelectionAtEnd(element: HTMLElement): void {
-  const selection = window.getSelection();
-  const range = new Range();
+  if (element.isConnected) {
+    const selection = window.getSelection();
+    const range = new Range();
 
-  range.selectNodeContents(element);
-  range.collapse();
+    range.selectNodeContents(element);
+    range.collapse();
 
-  selection?.removeAllRanges();
-  selection?.addRange(range);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }
 }
